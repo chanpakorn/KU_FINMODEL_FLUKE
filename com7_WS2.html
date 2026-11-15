@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COM7 Stock Radar — Daily Driver Analytics</title>
+<style>
+:root{--font:system-ui,-apple-system,"Segoe UI",sans-serif}
+[data-theme="dark"]{color-scheme:dark;--page:#0d0d0d;--surface:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);
+ --s1:#3987e5;--s2:#d95926;--bull:#3987e5;--bear:#e66767;--warn:#fab219;--good:#0ca30c;--crit:#d03b3b;--okt:#0ca30c;--mid:#383835;--onfill:#fff}
+[data-theme="light"]{color-scheme:light;--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);
+ --s1:#2a78d6;--s2:#eb6834;--bull:#2a78d6;--bear:#e34948;--warn:#fab219;--good:#0ca30c;--crit:#d03b3b;--okt:#006300;--mid:#f0efec;--onfill:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.5 var(--font)}
+a{color:var(--ink);text-underline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding:16px 20px 48px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:10px}
+h1{font-size:20px;margin:0;font-weight:650;letter-spacing:.2px}
+h1 small{font-weight:400;color:var(--ink2);font-size:13px;margin-left:8px}
+h2{font-size:15px;margin:0 0 8px;font-weight:650}
+h3{font-size:13px;margin:14px 0 6px;font-weight:650;color:var(--ink)}
+.banner{border:1px solid var(--border);border-left:4px solid var(--warn);background:var(--surface);padding:8px 12px;border-radius:6px;font-size:12.5px;color:var(--ink2);margin-bottom:12px}
+.banner b{color:var(--ink)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--axis);margin-bottom:12px}
+.tabs button{background:none;border:0;color:var(--ink2);padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+button:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px}
+.controls label{display:flex;flex-direction:column;font-size:11.5px;color:var(--ink2);gap:3px}
+.controls select,.controls input[type=number],.controls input[type=text]{background:var(--page);color:var(--ink);border:1px solid var(--axis);border-radius:5px;padding:5px 7px;font:inherit;min-width:70px}
+.btn{background:var(--surface);color:var(--ink);border:1px solid var(--axis);border-radius:5px;padding:6px 10px;font:inherit;cursor:pointer}
+.btn:hover{background:var(--grid)}
+.btn.primary{background:var(--ink);color:var(--page);border-color:var(--ink);font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--axis);border-radius:5px;overflow:hidden}
+.seg button{background:none;border:0;color:var(--ink2);padding:6px 10px;font:inherit;cursor:pointer;border-right:1px solid var(--axis)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--page);font-weight:650}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;min-width:0}
+.c12{grid-column:span 12}.c8{grid-column:span 8}.c7{grid-column:span 7}.c6{grid-column:span 6}.c5{grid-column:span 5}.c4{grid-column:span 4}.c3{grid-column:span 3}
+@media(max-width:900px){.c8,.c7,.c6,.c5,.c4,.c3{grid-column:span 12}}
+.sub{color:var(--ink2);font-size:12.5px;margin:-4px 0 8px}
+.hero{display:flex;flex-wrap:wrap;gap:18px;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px;font-size:30px;font-weight:750;letter-spacing:1px;color:var(--onfill)}
+.badge.bull{background:var(--bull)}.badge.bear{background:var(--bear)}.badge.na{background:var(--axis);color:var(--ink)}
+.kpi{min-width:110px}.kpi .v{font-size:24px;font-weight:650}.kpi .l{font-size:11.5px;color:var(--ink2)}
+.kpis{display:flex;flex-wrap:wrap;gap:20px 26px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--grid);vertical-align:top}
+th{color:var(--ink2);font-weight:600;position:sticky;top:0;background:var(--surface)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border:1px solid var(--axis);border-radius:4px;color:var(--ink2);margin-right:6px;min-width:34px;text-align:center}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:650;padding:2px 8px;border-radius:999px;border:1px solid var(--axis)}
+.chip.pass{border-color:var(--good)}.chip.warn{border-color:var(--warn)}.chip.fail{border-color:var(--crit)}
+.chart{position:relative;width:100%}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin:0 0 4px}
+.legend i{display:inline-block;width:16px;height:0;border-top:2px solid;vertical-align:middle;margin-right:6px}
+.legend i.sh{height:10px;border:0;width:12px;opacity:.5;vertical-align:-1px}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--axis);border-radius:6px;padding:7px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.35);display:none;max-width:280px}
+#tip .h{color:var(--ink2);margin-bottom:3px}
+#tip .r{display:flex;gap:8px;align-items:center;white-space:nowrap}
+#tip .r b{font-size:13px}#tip .r span.k{display:inline-block;width:12px;border-top:2px solid}
+#tip .r em{font-style:normal;color:var(--ink2)}
+.cb-row{display:grid;grid-template-columns:190px 1fr 56px;gap:8px;align-items:center;padding:3px 0;font-size:12.5px;cursor:default}
+.cb-row:hover{background:var(--grid)}
+.cb-track{position:relative;height:16px}
+.cb-track:before{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;border-left:1px solid var(--axis)}
+.cb-bar{position:absolute;top:2px;height:12px;border-radius:0 4px 4px 0}
+.cb-bar.neg{border-radius:4px 0 0 4px}
+.cb-val{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.axisnote{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink2);margin:2px 0 6px 198px;margin-right:64px}
+.alert{display:flex;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px solid var(--grid)}
+.alert .ic{min-width:92px;font-weight:700;font-size:11.5px;color:var(--ink2);white-space:nowrap}
+.slider-row{display:grid;grid-template-columns:200px 1fr 120px;gap:10px;align-items:center;padding:6px 0;font-size:13px}
+.slider-row input[type=range]{width:100%;accent-color:var(--ink)}
+.heat td{text-align:center;font-variant-numeric:tabular-nums;border:1px solid var(--page);padding:7px 6px}
+.heat td.hd{background:none;color:var(--ink2);font-weight:600}
+pre{background:var(--page);border:1px solid var(--border);border-radius:6px;padding:10px 12px;overflow:auto;font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin:6px 0 10px;white-space:pre-wrap}
+.prose p,.prose li{max-width:96ch}
+.prose ul{padding-left:18px}
+.prose li{margin:3px 0}
+.muted{color:var(--ink2)}
+.small{font-size:12px}
+details{margin-top:8px}summary{cursor:pointer;color:var(--ink2);font-size:12.5px}
+.wm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:34px;font-weight:800;color:var(--ink);opacity:.05;letter-spacing:4px;transform:rotate(-8deg)}
+.dim{opacity:.45;transition:opacity .15s}
+.footer{margin-top:24px;font-size:12px;color:var(--muted)}
+@media print{.controls,.tabs,#tip{display:none}.panel{display:block!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>COM7 Stock Radar <small>SET: COM7 · Daily driver &amp; regime analytics</small></h1>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span id="srcChip" class="chip warn" title="Data source"></span>
+    <button class="btn" id="themeBtn" aria-label="Toggle light/dark theme">Light / Dark</button>
+  </div>
+</header>
+<div class="banner" role="note"><b>Research prototype — not investment advice.</b> Outputs are statistical estimates from a simple model and can be wrong. The built-in dataset is <b>synthetic demo data</b> (generated, not real COM7 prices); load your own licensed CSV to analyse real data. See the Governance tab before any real use.</div>
+
+<nav class="tabs" role="tablist" id="tabs">
+  <button role="tab" data-tab="radar" aria-selected="true">Radar</button>
+  <button role="tab" data-tab="impact" aria-selected="false">Impact &amp; What-if</button>
+  <button role="tab" data-tab="drivers" aria-selected="false">Drivers</button>
+  <button role="tab" data-tab="regime" aria-selected="false">Regime method</button>
+  <button role="tab" data-tab="brief" aria-selected="false">Brief &amp; financials</button>
+  <button role="tab" data-tab="gov" aria-selected="false">Governance</button>
+</nav>
+
+<form class="controls" id="controls" onsubmit="return false">
+  <label>Data
+    <select id="src"><option value="demo">Synthetic demo</option><option value="csv">Upload CSV…</option><option value="url">CSV from URL…</option></select>
+  </label>
+  <label id="urlWrap" style="display:none">CSV URL (CORS-enabled or localhost)<input type="text" id="urlIn" placeholder="http://localhost:8000/com7.csv" style="min-width:260px"></label>
+  <input type="file" id="fileIn" accept=".csv,text/csv" style="display:none">
+  <label>Horizon H (days)<select id="pH"><option>5</option><option selected>10</option><option>20</option></select></label>
+  <label>Bear = fwd return &lt; −k·σ√H<select id="pK"><option>0.25</option><option selected>0.5</option><option>0.75</option><option>1</option></select></label>
+  <label>Miss cost : false-alarm cost<select id="pC"><option value="1">1 : 1</option><option value="1.5">1.5 : 1</option><option value="2" selected>2 : 1</option><option value="3">3 : 1</option><option value="4">4 : 1</option></select></label>
+  <label>Exit hysteresis δ<select id="pD"><option value="0">0.00</option><option value="0.05">0.05</option><option value="0.08" selected>0.08</option><option value="0.12">0.12</option></select></label>
+  <label>Confirm days<select id="pN"><option>1</option><option selected>2</option><option>3</option></select></label>
+  <label>Switch cost (bp)<input type="number" id="pF" value="25" min="0" max="200" step="5" style="width:80px"></label>
+  <label>View window
+    <span class="seg" id="win"><button type="button" data-w="63" aria-pressed="false">3M</button><button type="button" data-w="126" aria-pressed="false">6M</button><button type="button" data-w="252" aria-pressed="true">1Y</button><button type="button" data-w="0" aria-pressed="false">All</button></span>
+  </label>
+  <button class="btn" type="button" id="tplBtn">CSV template</button>
+  <button class="btn" type="button" id="expBtn">Export signals</button>
+</form>
+
+<!-- ============ RADAR ============ -->
+<section class="panel" id="p-radar">
+ <div class="grid">
+  <div class="card c12">
+    <div class="hero" id="hero"></div>
+  </div>
+  <div class="card c7">
+    <h2>Price &amp; regime</h2>
+    <div class="legend" id="lgPrice"></div>
+    <div class="chart" id="chPrice"></div>
+    <details><summary>View as table (last 40 days)</summary><div id="tblPrice" style="max-height:260px;overflow:auto"></div></details>
+  </div>
+  <div class="card c5">
+    <h2>Driver radar</h2>
+    <p class="sub">Each spoke = one driver’s push on today’s Bear probability. Dashed ring = neutral; outward = more bearish, inward = more bullish.</p>
+    <div class="legend"><span><i style="border-color:var(--ink)"></i>Today</span><span><i style="border-color:var(--muted);border-top-style:dashed"></i>5 trading days ago</span></div>
+    <div class="chart" id="chRadar"></div>
+  </div>
+  <div class="card c7">
+    <h2>P(Bear) &amp; threshold</h2>
+    <p class="sub">Out-of-sample probability from the walk-forward model; red dashed = entry threshold θ, grey dashed = exit threshold.</p>
+    <div class="chart" id="chProb"></div>
+  </div>
+  <div class="card c5">
+    <h2>Why today? Driver contributions</h2>
+    <p class="sub">Contribution to the logit of P(Bear) = weight × standardised value. Red pushes toward Bear, blue toward Bull.</p>
+    <div class="axisnote"><span>◀ Bull</span><span>Bear ▶</span></div>
+    <div id="chContrib"></div>
+  </div>
+  <div class="card c6"><h2>Radar alerts</h2><div id="alerts"></div></div>
+  <div class="card c6"><h2>Model health &amp; guardrails</h2><div id="health"></div></div>
+ </div>
+</section>
+
+<!-- ============ IMPACT ============ -->
+<section class="panel" id="p-impact" hidden>
+ <div class="grid">
+  <div class="card c7">
+    <h2>Daily what-if: driver shock → COM7 move</h2>
+    <p class="sub">Contemporaneous OLS betas on the last ≤504 days (explanatory, not predictive). Move the sliders to stress one day.</p>
+    <div class="small muted" style="margin-bottom:6px">Position size (THB): <input type="number" id="pos" value="10000000" step="1000000" min="0" style="width:130px;background:var(--page);color:var(--ink);border:1px solid var(--axis);border-radius:5px;padding:4px 6px"></div>
+    <div id="sliders"></div>
+    <div id="whatifOut" style="margin-top:10px"></div>
+  </div>
+  <div class="card c5">
+    <h2>Estimated betas</h2>
+    <div id="betaTbl"></div>
+    <p class="small muted">|t| &lt; 2 ⇒ not distinguishable from zero. Betas are unstable across regimes; re-estimate daily.</p>
+  </div>
+  <div class="card c12">
+    <h2>Fundamental translation: margin, volume, multiple</h2>
+    <p class="sub">Editable assumptions (illustrative FY2026E, THB m). Defaults come from reported FY2025 structure and broker consensus found in public sources — verify before use.</p>
+    <div class="grid" style="gap:10px">
+      <div class="c4" id="valInputs"></div>
+      <div class="c8" id="valOut"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ DRIVERS ============ -->
+<section class="panel" id="p-drivers" hidden>
+ <div class="card prose">
+  <h2>Feature selection — daily independent variables</h2>
+  <p class="sub">Four families. “In demo model” = implemented from the technical block or from the synthetic exogenous columns; everything else is a recommended data feed to add as extra CSV columns (unknown columns are auto-featurised as 5-day changes).</p>
+  <div style="overflow:auto"><table id="drvTbl"></table></div>
+  <h3>Selection rules</h3>
+  <ul>
+   <li><b>Point-in-time only:</b> every variable must be knowable at the close of day t (publication-time stamped). Monthly/quarterly series enter as event flags or step functions with their real release dates, never back-filled to the reference period.</li>
+   <li><b>Parsimony:</b> ≤ 20 features per ~500 training days; ridge penalty; re-select quarterly using out-of-sample (not in-sample) information gain.</li>
+   <li><b>Economic prior first:</b> each variable needs a written transmission mechanism and expected sign; unexpected sign flips are flagged for review rather than accepted.</li>
+  </ul>
+ </div>
+</section>
+
+<!-- ============ REGIME ============ -->
+<section class="panel" id="p-regime" hidden>
+ <div class="grid">
+  <div class="card c6 prose">
+   <h2>Bull / Bear regime classifier</h2>
+   <h3>1 · Label (what “Bear” means)</h3>
+<pre>σ̂ₜ  = stdev( rₜ₋₅₉ … rₜ ),   rₜ = ln(Pₜ / Pₜ₋₁)
+Fwdₜ = ln(Pₜ₊ₕ / Pₜ)
+yₜ  = 1  if  Fwdₜ &lt; −k · σ̂ₜ · √H      (Bear)
+       0  otherwise                     (Bull)</pre>
+   <h3>2 · Probability model (ridge-logistic)</h3>
+<pre>xₜ,ⱼ = clip( (fₜ,ⱼ − μⱼ) / sⱼ , ±5 )     μ, s from TRAIN rows only
+zₜ   = b + Σⱼ wⱼ · xₜ,ⱼ
+P(Bear)ₜ = 1 / (1 + e^(−zₜ))
+(b,w) = argmin −Σ [ y·ln p + (1−y)·ln(1−p) ] + λ‖w‖²     (λ = 10, b unpenalised)</pre>
+   <h3>3 · Decision rule (cost-based threshold)</h3>
+<pre>θ = c_FA / (c_FA + c_MISS)          (Bayes-optimal cut on a calibrated P)
+Enter Bear : P(Bear)ₜ ≥ θ  for N consecutive closes
+Exit  Bear : P(Bear)ₜ &lt; θ − δ
+Regimeₜ = Bear (1) / Bull (0);   position at t+1 = 0 if Bear else 1</pre>
+   <div id="regimeLive" class="small"></div>
+   <h3>4 · Risk-management rationale</h3>
+   <ul>
+    <li><b>Asymmetric loss.</b> Missing a drawdown costs more than a false alarm that merely sidesteps some upside, so θ &lt; 0.5. With miss:false-alarm = 2:1, θ = 1/3. The ratio is a portfolio-level input (set from your drawdown budget), not a statistic.</li>
+    <li><b>Hysteresis (δ) + confirmation (N).</b> Probabilities are noisy; a gap between entry and exit levels and a multi-day confirm cut whipsaw, which is expensive at ~25 bp round-trip friction on a Thai small/mid-cap.</li>
+    <li><b>Calibration check.</b> The Bayes cut is only valid if P is calibrated; the reliability table (right) must lie near the diagonal. If not, recalibrate (Platt/isotonic on a separate validation block) before trusting θ.</li>
+    <li><b>Label scale.</b> Volatility-scaled threshold keeps “Bear” meaning the same in calm and stormy markets.</li>
+   </ul>
+   <p class="small muted">Binary output is a simplification; always read the probability and its drivers alongside the label.</p>
+  </div>
+  <div class="card c6">
+   <h2>Out-of-sample diagnostics (walk-forward)</h2>
+   <div id="oosKpis" class="kpis" style="margin-bottom:10px"></div>
+   <h3>Reliability (calibration)</h3><div id="calTbl"></div>
+   <h3>Regime-conditional outcomes</h3><div id="condTbl"></div>
+   <h3>Threshold sensitivity (same model, re-thresholded)</h3><div id="thrTbl"></div>
+  </div>
+  <div class="card c12">
+   <h2>Rule-based position vs buy &amp; hold</h2>
+   <p class="sub">Hold stock while Bull, cash while Bear; decision at close t, return earned on t+1; switch costs applied. On synthetic data this shows mechanics only — it is not evidence of an edge.</p>
+   <div class="legend" id="lgEq"></div>
+   <div class="chart" id="chEq"></div>
+   <div id="eqKpis" class="kpis" style="margin-top:8px"></div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ BRIEF ============ -->
+<section class="panel" id="p-brief" hidden>
+ <div class="grid">
+  <div class="card c12 prose">
+   <h2>1 · Business problem statement</h2>
+   <p><b>Why daily COM7 price-driver analytics matter.</b> COM7 is Thailand’s largest IT-retail chain (1,323 locations at Mar-2026) and a distribution proxy for Apple’s Thai demand; Apple has historically been more than half of revenue (Maybank Kim Eng, 2023), and Q4 launch/holiday trading has been about 30% of annual profit. That concentration makes the stock unusually sensitive to a handful of daily-observable catalysts — launch demand and allocation news, Apple price resets, the THB, rates and consumer-credit conditions — and to the market’s expectation path around them.</p>
+   <ul>
+    <li><b>Portfolio management.</b> The shares re-rated about +68% YTD to ~THB 33 by early Nov-2026 (MarketScreener quote, 3 Nov), with a P/E in the high teens, ROE near 39% and D/E near 0.9×. A high-expectation, levered-to-sentiment name warrants daily visibility of <i>what is pushing the price</i> so sizing follows evidence, not narrative.</li>
+    <li><b>Risk mitigation.</b> Event gaps (launch, results, price resets) and a seasonal run-up that brokers measure at roughly +27% on average between 1 Jul and 15 Oct (2022–26) make the post-window phase — where we are now — the period where a disciplined de-risk rule has the most value. Daily regime probabilities give a pre-agreed trigger rather than a discretionary one.</li>
+    <li><b>Alpha generation.</b> Seasonality is crowded and well known; the residual edge is in <i>differentiating good from bad years</i> (sell-through vs. allocation, margin quality, financing-book health) and in timing exit/re-entry. The radar isolates which drivers are carrying the move so the analyst can challenge it.</li>
+   </ul>
+   <h2 style="margin-top:18px">2 · Financial implications of driver shifts</h2>
+   <p class="sub">Computed live from the editable assumptions in <b>Impact &amp; What-if</b> (base: FY26E revenue, 14.0% gross margin, 20% tax, ~2.40bn shares).</p>
+   <div style="overflow:auto"><table id="fiTbl"></table></div>
+   <p class="small muted">Illustrative arithmetic, not a forecast. Sources: SET listed-company snapshot 3M/2026 (revenue THB 23.6bn, net profit THB 1.23bn +25% YoY, GPM 14.0% vs 13.6%); company FY2025 results (revenue ≈ THB 87.3bn, net profit ≈ THB 4.06bn); guidance of ~10% revenue and 10–15% profit growth for 2026 (Kaohoon International); later KGI upgrade (THB 36 target) citing double-digit iPhone 18 unit growth and non-IT growth in UFUND/iCare; FY26E revenue consensus ≈ THB 98bn (MarketScreener).</p>
+  </div>
+  <div class="card c12 prose">
+   <h2>Sources used for context</h2>
+   <ul class="small">
+    <li><a href="https://lssmedia.setlink.set.or.th/2026/3M/COM7-3M69-ListedCompanySnapshot-EN.html">SET Listed Company Snapshot — COM7, 3M/2026</a></li>
+    <li><a href="https://www.kaohooninternational.com/?p=582637">Kaohoon International — COM7 1Q26 results &amp; 2026 guidance</a></li>
+    <li><a href="https://www.kaohooninternational.com/markets/591341">Kaohoon International — KGI raises COM7 to Outperform, THB 36 target</a></li>
+    <li><a href="https://in.marketscreener.com/quote/stock/COM7-26472964/">MarketScreener — COM7 quote (THB 33.00, 3 Nov 2026)</a></li>
+    <li><a href="https://www.mitihoon.com/?p=644767">Mitihoon — COM7 seasonality note (Jul 1–Oct 15 average run-up; Q4 share of profit)</a></li>
+    <li><a href="https://ca.investing.com/equities/com7-pcl-financial-summary">Investing.com — COM7 valuation ratios</a></li>
+   </ul>
+   <p class="small muted">Prices/ratios are snapshots from public pages and may be stale or inconsistent between vendors; confirm on SET / your licensed terminal. Third-party page text was paraphrased, not reproduced.</p>
+  </div>
+ </div>
+</section>
+
+<!-- ============ GOVERNANCE ============ -->
+<section class="panel" id="p-gov" hidden>
+ <div class="grid">
+  <div class="card c6 prose">
+   <h2>Ethical guardrails</h2>
+   <ul>
+    <li><b>Decision support, not advice or execution.</b> No order routing. Human sign-off on every action. Distributing signals to third parties can constitute regulated investment advice in Thailand — involve compliance/legal before any external use.</li>
+    <li><b>Market integrity.</b> No material non-public information; no scraping that breaches terms of service; licensed data only (SET and vendor redistribution terms apply). Do not publish signals in a way that could be used to move a thinly-traded stock.</li>
+    <li><b>Suitability &amp; proportionality.</b> A Bull/Bear flag ignores the user’s objectives, horizon and risk capacity; show it with sizing limits, never as a standalone instruction.</li>
+    <li><b>Conflicts of interest.</b> Disclose any position held by the builder/user in COM7 or competitors; separate research from trading approval.</li>
+    <li><b>Privacy.</b> Only market data; if alternative data (social posts, app/search traffic) is added, strip personal data and document lawful basis under PDPA.</li>
+    <li><b>Accountability.</b> Named model owner, independent validator, change log, and a documented kill-switch.</li>
+   </ul>
+   <h2>Interface transparency (required disclosures)</h2>
+   <ul>
+    <li>Persistent “not advice / may be wrong” banner and a <b>SYNTHETIC DATA</b> mark whenever demo data is loaded (both implemented).</li>
+    <li>Data vendor, as-of timestamp, latency and adjustment method (splits/dividends) on screen; stale-data warning when the last bar is old (implemented).</li>
+    <li>Show probability <i>and</i> label, base rate, training window, last refit date, OOS AUC/Brier/calibration (implemented), and the top drivers behind today’s reading (implemented).</li>
+    <li>State what the model cannot see: news after close, halts, corporate actions, liquidity shocks, structural breaks.</li>
+    <li>Past/backtest performance carries no promise of future results; backtests include costs and use only walk-forward predictions.</li>
+   </ul>
+  </div>
+  <div class="card c6 prose">
+   <h2>Model-risk management</h2>
+   <table>
+    <tr><th>Risk</th><th>Control in this build</th><th>Control to add for production</th></tr>
+    <tr><td><b>Look-ahead bias</b></td><td>All features use data ≤ close t; positions earn return from t+1; exogenous series must be as-of-close.</td><td>Point-in-time vendor snapshots; publication-lag table per series; no revised macro vintages.</td></tr>
+    <tr><td><b>Data leakage</b></td><td>Walk-forward refits; training rows limited to s ≤ T−H so labels are fully realised; scaler fitted on train only; automated audit + <i>causality test</i> (truncate data, re-run, predictions must match).</td><td>Embargo + purged k-fold for any hyper-parameter search; frozen final hold-out used once.</td></tr>
+    <tr><td><b>Overfitting</b></td><td>Ridge penalty, ~15 features, 3 hyper-parameters, no feature search inside the app.</td><td>Record every trial; deflated Sharpe / White reality-check; challenger models (e.g. GBM, simple trend filter) must be beaten OOS.</td></tr>
+    <tr><td><b>Label overlap</b></td><td>Acknowledged: H-day labels overlap, so effective sample ≈ n/H.</td><td>Report block-bootstrap CIs; avoid quoting naive t-stats.</td></tr>
+    <tr><td><b>Regime drift</b></td><td>Health card flags Brier skill ≤ 0, weak AUC, poor calibration.</td><td>PSI/feature-drift monitors; auto-demote to “model degraded” and suppress label.</td></tr>
+    <tr><td><b>Survivorship / corporate actions</b></td><td>User supplies adjusted closes.</td><td>Vendor-adjusted series reconciled to SET; flag splits/dividends.</td></tr>
+    <tr><td><b>Execution realism</b></td><td>Configurable switch cost.</td><td>Spread, impact and liquidity (ADV) caps; T+2 settlement and price-limit effects.</td></tr>
+    <tr><td><b>Operational</b></td><td>Single-file, offline, no network except the optional URL loader.</td><td>Versioned releases, access control, audit log, monitored data pipeline, rollback.</td></tr>
+   </table>
+   <h3>Validation cadence (SR 11-7-style)</h3>
+   <ul>
+    <li><b>Conceptual soundness:</b> independent review of labels, features and thresholds (annual or on change).</li>
+    <li><b>Ongoing monitoring:</b> daily health card; weekly calibration; monthly drift review.</li>
+    <li><b>Outcome analysis:</b> quarterly OOS review vs. buy-and-hold and vs. a naïve 50/200-day trend rule.</li>
+    <li><b>Kill-switch:</b> suspend the label if 60-day rolling Brier skill &lt; 0 or data is stale beyond 1 trading day.</li>
+   </ul>
+  </div>
+ </div>
+</section>
+
+<div class="footer">Built as a standalone file — no external libraries, no tracking. Open directly, or serve with <code>python3 -m http.server 8000</code> and visit <code>http://localhost:8000/com7_stock_radar.html</code>.</div>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script id="core">
+/*CORE_START*/
+const COLMAP={
+ SET:{cat:'Macro',label:'SET index',tr:'chg5',d:'ret',unit:'%',scale:0.01},
+ USDTHB:{cat:'Macro',label:'USD/THB',tr:'chg5',d:'ret',unit:'%',scale:0.01},
+ VIX:{cat:'Macro',label:'VIX',tr:'chg5',d:'ret',unit:'%',scale:0.01},
+ TH10Y:{cat:'Macro',label:'TH 10Y yield',tr:'dif5',d:'dif',unit:'bp',scale:0.01},
+ AAPL:{cat:'Sector',label:'AAPL',tr:'chg5',d:'ret',unit:'%',scale:0.01},
+ FFLOW:{cat:'Sentiment',label:'Foreign net flow',tr:'sum5',d:'lvl',unit:'THB bn',scale:1},
+ SENT:{cat:'Sentiment',label:'News sentiment',tr:'lvl3',d:'lvl',unit:'idx',scale:1}
+};
+const sig=z=>1/(1+Math.exp(-z));
+function solveFlat(A0,b0,k){const A=Float64Array.from(A0),b=Float64Array.from(b0);
+ for(let i=0;i<k;i++){let p=i,m=Math.abs(A[i*k+i]);for(let r=i+1;r<k;r++){const v=Math.abs(A[r*k+i]);if(v>m){m=v;p=r}}
+  if(m<1e-12){A[i*k+i]+=1e-9}
+  if(p!==i){for(let c=0;c<k;c++){const t=A[i*k+c];A[i*k+c]=A[p*k+c];A[p*k+c]=t}const t=b[i];b[i]=b[p];b[p]=t}
+  const d=A[i*k+i];for(let r=i+1;r<k;r++){const f=A[r*k+i]/d;if(f===0)continue;for(let c=i;c<k;c++)A[r*k+c]-=f*A[i*k+c];b[r]-=f*b[i]}}
+ const x=new Float64Array(k);for(let i=k-1;i>=0;i--){let s=b[i];for(let c=i+1;c<k;c++)s-=A[i*k+c]*x[c];x[i]=s/A[i*k+i]}return x}
+function mean(a){let s=0,n=0;for(const v of a)if(isFinite(v)){s+=v;n++}return n?s/n:NaN}
+function sd(a){const m=mean(a);let s=0,n=0;for(const v of a)if(isFinite(v)){s+=(v-m)*(v-m);n++}return n>1?Math.sqrt(s/(n-1)):NaN}
+function smaA(a,w){const o=new Array(a.length).fill(NaN);let s=0;for(let i=0;i<a.length;i++){s+=a[i];if(i>=w)s-=a[i-w];if(i>=w-1)o[i]=s/w}return o}
+function rstd(a,w){const o=new Array(a.length).fill(NaN);for(let i=w-1;i<a.length;i++){let m=0;for(let j=i-w+1;j<=i;j++)m+=a[j];m/=w;let s=0;for(let j=i-w+1;j<=i;j++)s+=(a[j]-m)*(a[j]-m);o[i]=Math.sqrt(s/(w-1))}return o}
+function emaA(a,w){const k=2/(w+1),o=[];let e=a[0];for(let i=0;i<a.length;i++){e=i?a[i]*k+e*(1-k):a[0];o.push(e)}return o}
+function rsiA(P,w){const o=new Array(P.length).fill(NaN);let ag=0,al=0;for(let i=1;i<P.length;i++){const d=P[i]-P[i-1],g=Math.max(d,0),l=Math.max(-d,0);
+ if(i<=w){ag+=g/w;al+=l/w;if(i===w)o[i]=al===0?100:100-100/(1+ag/al)}else{ag=(ag*(w-1)+g)/w;al=(al*(w-1)+l)/w;o[i]=al===0?100:100-100/(1+ag/al)}}return o}
+function lagDiff(a,k,f){return a.map((v,i)=>i>=k?f(v,a[i-k]):NaN)}
+
+function buildFeatures(D){
+ const n=D.close.length,P=D.close,feats=[];
+ const lr=P.map((p,i)=>i?Math.log(p/P[i-1]):0);
+ const s20=smaA(P,20),sd20=rstd(P,20),s50=smaA(P,50),s200=smaA(P,200);
+ const e12=emaA(P,12),e26=emaA(P,26),macd=e12.map((v,i)=>v-e26[i]),sg=emaA(macd,9);
+ const rsi=rsiA(P,14),rv=rstd(lr,20);
+ const F=(name,cat,label,vals,desc)=>feats.push({name,cat,label,vals,desc:desc||''});
+ F('ret5','Technical','5d return',lagDiff(P,5,(a,b)=>Math.log(a/b)));
+ F('ret20','Technical','20d return',lagDiff(P,20,(a,b)=>Math.log(a/b)));
+ F('rsi14','Technical','RSI(14)',rsi.map(v=>v-50));
+ F('macdH','Technical','MACD hist/price',macd.map((v,i)=>(v-sg[i])/P[i]));
+ F('dist50','Technical','vs 50d MA',P.map((p,i)=>isFinite(s50[i])?Math.log(p/s50[i]):NaN));
+ F('dist200','Technical','vs 200d MA',P.map((p,i)=>isFinite(s200[i])?Math.log(p/s200[i]):NaN));
+ F('rv20','Technical','Realised vol 20d',rv.map(v=>v*Math.sqrt(252)));
+ if(D.volume){const lv=D.volume.map(v=>Math.log(Math.max(v,1))),m60=smaA(lv,60),s60=rstd(lv,60);F('volz','Technical','Volume z (60d)',lv.map((v,i)=>(v-m60[i])/(s60[i]||1)))}
+ F('dd60','Technical','Drawdown vs 60d high',P.map((p,i)=>{if(i<59)return NaN;let m=-Infinity;for(let j=i-59;j<=i;j++)m=Math.max(m,P[j]);return Math.log(p/m)}));
+ const exNames=Object.keys(D.ex||{});
+ for(const c of exNames){const x=D.ex[c],cm=COLMAP[c.toUpperCase()];
+  const allPos=x.every(v=>v>0);const meta=cm||{cat:'Sector',label:c,tr:allPos?'chg5':'dif5',d:allPos?'ret':'dif',unit:allPos?'%':'units',scale:allPos?0.01:1};
+  let v;
+  if(meta.tr==='chg5')v=lagDiff(x,5,(a,b)=>Math.log(a/b));
+  else if(meta.tr==='dif5')v=lagDiff(x,5,(a,b)=>a-b);
+  else if(meta.tr==='sum5')v=smaA(x,5).map(m=>m*5);
+  else v=smaA(x,3);
+  const suffix={chg5:' 5d chg',dif5:' 5d Δ',sum5:' 5d Σ',lvl3:' 3d avg'}[meta.tr];
+  F(c.toUpperCase(),meta.cat,meta.label+suffix,v);}
+ const valid=new Array(n).fill(false);let first=-1;
+ const X=new Array(n);
+ for(let t=0;t<n;t++){const row=feats.map(f=>f.vals[t]);if(row.every(isFinite)){valid[t]=true;X[t]=row;if(first<0)first=t}}
+ return{n,feats,X,valid,firstValid:first,lr,s50,s200,rsi,rv,sma20:s20,sd20};
+}
+function buildLabels(P,H,k){const n=P.length,y=new Array(n).fill(NaN),fwd=new Array(n).fill(NaN);
+ const lr=P.map((p,i)=>i?Math.log(p/P[i-1]):0);
+ for(let t=0;t+H<n;t++){fwd[t]=Math.log(P[t+H]/P[t]);if(t>=60){const s=sd(lr.slice(t-59,t+1));y[t]=fwd[t]<-k*s*Math.sqrt(H)?1:0}}
+ return{y,fwd}}
+function fitLogit(X,y,lam){const n=X.length,d=X[0].length,k=d+1;let w=new Float64Array(k);
+ let m=0;for(const v of y)m+=v;m/=n;w[0]=Math.log((m+1e-3)/(1-m+1e-3));
+ for(let it=0;it<40;it++){const g=new Float64Array(k),H=new Float64Array(k*k);
+  for(let i=0;i<n;i++){const xi=X[i];let z=w[0];for(let j=0;j<d;j++)z+=w[j+1]*xi[j];
+   const p=sig(z),r=p-y[i],wt=Math.max(p*(1-p),1e-6);g[0]+=r;H[0]+=wt;
+   for(let j=0;j<d;j++){const xj=xi[j];g[j+1]+=r*xj;H[j+1]+=wt*xj;H[(j+1)*k]+=wt*xj;
+    for(let l=0;l<=j;l++){const v=wt*xj*xi[l];H[(j+1)*k+l+1]+=v;if(l!==j)H[(l+1)*k+j+1]+=v}}}
+  for(let j=1;j<k;j++){g[j]+=lam*w[j];H[j*k+j]+=lam}
+  const dl=solveFlat(H,g,k);let mx=0;for(let j=0;j<k;j++){w[j]-=dl[j];mx=Math.max(mx,Math.abs(dl[j]))}
+  if(mx<1e-7)break}
+ return Array.from(w)}
+function walkForward(F,Y,o){const n=F.n,d=F.feats.length,P=new Array(n).fill(NaN),base=new Array(n).fill(NaN),modelAt=new Array(n).fill(-1),models=[];
+ let violations=0,maxLabelEnd=-1,maxT=-1;const t0=F.firstValid;
+ if(t0<0)return{P,base,modelAt,models,audit:{violations:0,refits:0}};
+ for(let T=t0+o.minTrain+o.H;T<n;T+=o.refit){
+  const idx=[];for(let s=t0;s<=T-o.H;s++)if(F.valid[s]&&isFinite(Y.y[s]))idx.push(s);
+  if(idx.length<120)continue;
+  for(const s of idx){if(s+o.H>T)violations++;maxLabelEnd=Math.max(maxLabelEnd,s+o.H)}
+  const mu=new Array(d).fill(0),sdv=new Array(d).fill(1);
+  for(let j=0;j<d;j++){const col=idx.map(s=>F.X[s][j]);mu[j]=mean(col);sdv[j]=Math.max(sd(col),1e-9)}
+  const Xs=idx.map(s=>F.X[s].map((v,j)=>Math.max(-5,Math.min(5,(v-mu[j])/sdv[j]))));
+  const yy=idx.map(s=>Y.y[s]);const w=fitLogit(Xs,yy,o.lam);const br=mean(yy);
+  models.push({T,mu,sd:sdv,w,nTrain:idx.length,baseRate:br,lastLabelEnd:Math.max(...idx)+o.H});
+  const mi=models.length-1;
+  for(let t=T;t<Math.min(T+o.refit,n);t++){if(!F.valid[t])continue;let z=w[0];
+   for(let j=0;j<d;j++)z+=w[j+1]*Math.max(-5,Math.min(5,(F.X[t][j]-mu[j])/sdv[j]));
+   P[t]=sig(z);base[t]=br;modelAt[t]=mi}}
+ return{P,base,modelAt,models,audit:{violations,refits:models.length,maxLabelEnd}}}
+function contribAt(F,WF,t){const mi=WF.modelAt[t];if(mi<0||!F.valid[t])return null;const m=WF.models[mi];
+ return F.feats.map((f,j)=>{const x=Math.max(-5,Math.min(5,(F.X[t][j]-m.mu[j])/m.sd[j]));return{name:f.name,cat:f.cat,label:f.label,z:x,w:m.w[j+1],c:m.w[j+1]*x,raw:F.X[t][j]}})}
+function regimeSeries(P,theta,delta,confirm){const n=P.length,st=new Array(n).fill(NaN);let s=0,k=0;
+ for(let t=0;t<n;t++){if(!isFinite(P[t]))continue;
+  if(s===0){if(P[t]>=theta){k++;if(k>=confirm){s=1;k=0}}else k=0}else{if(P[t]<theta-delta){s=0;k=0}}
+  st[t]=s}return st}
+function aucOf(p,y){const idx=p.map((_,i)=>i).sort((a,b)=>p[a]-p[b]);const r=new Array(p.length);let i=0;
+ while(i<idx.length){let j=i;while(j+1<idx.length&&p[idx[j+1]]===p[idx[i]])j++;const av=(i+j)/2+1;for(let k=i;k<=j;k++)r[idx[k]]=av;i=j+1}
+ let n1=0,sr=0;for(let k=0;k<y.length;k++)if(y[k]===1){n1++;sr+=r[k]}const n0=y.length-n1;
+ return n1&&n0?(sr-n1*(n1+1)/2)/(n1*n0):NaN}
+function evalOOS(WF,Y,state,from){const p=[],y=[],b=[];
+ for(let t=from;t<WF.P.length;t++)if(isFinite(WF.P[t])&&isFinite(Y.y[t])){p.push(WF.P[t]);y.push(Y.y[t]);b.push(WF.base[t])}
+ const n=p.length;if(n<30)return{n,ok:false};
+ let br=0,bb=0;for(let i=0;i<n;i++){br+=(p[i]-y[i])**2;bb+=(b[i]-y[i])**2}br/=n;bb/=n;
+ const bins=Array.from({length:10},()=>({n:0,p:0,y:0}));
+ for(let i=0;i<n;i++){const k=Math.min(9,Math.floor(p[i]*10));bins[k].n++;bins[k].p+=p[i];bins[k].y+=y[i]}
+ let ece=0;for(const q of bins)if(q.n)ece+=q.n/n*Math.abs(q.p/q.n-q.y/q.n);
+ const cond={bear:{n:0,fwd:[],hit:0,y:0},bull:{n:0,fwd:[],hit:0,y:0}};let TP=0,FP=0,FN=0,TN=0;
+ for(let t=from;t<state.length;t++){if(!isFinite(state[t]))continue;const c=state[t]===1?cond.bear:cond.bull;c.n++;if(isFinite(Y.fwd[t]))c.fwd.push(Y.fwd[t]);
+  if(isFinite(Y.y[t])){c.y++;c.hit+=Y.y[t];if(state[t]===1){Y.y[t]===1?TP++:FP++}else{Y.y[t]===1?FN++:TN++}}}
+ return{ok:true,n,auc:aucOf(p,y),brier:br,brierBase:bb,skill:1-br/bb,baseRate:mean(y),ece,bins,cond,TP,FP,FN,TN,
+  precision:TP+FP?TP/(TP+FP):NaN,recall:TP+FN?TP/(TP+FN):NaN}}
+function simulate(P,state,from,cost){const n=P.length,eqS=new Array(n).fill(NaN),eqB=new Array(n).fill(NaN),rs=[];
+ let s=1,b=1,prev=null,sw=0,bear=0,cnt=0;let st=null;for(let t=from;t<n;t++)if(isFinite(state[t])){st=t;break}
+ if(st===null)return null;eqS[st]=1;eqB[st]=1;prev=state[st]===1?0:1;
+ for(let t=st+1;t<n;t++){const pos=state[t-1]===1?0:1,r=P[t]/P[t-1]-1;let rr=pos*r;
+  if(pos!==prev){rr-=cost;sw++;prev=pos}
+  s*=1+rr;b*=1+r;rs.push(rr);eqS[t]=s;eqB[t]=b;if(state[t]===1)bear++;cnt++}
+ const dd=a=>{let m=-Infinity,w=0;for(const v of a){if(!isFinite(v))continue;m=Math.max(m,v);w=Math.min(w,v/m-1)}return w};
+ const rb=[];for(let t=st+1;t<n;t++)rb.push(P[t]/P[t-1]-1);
+ const sh=r=>sd(r)>0?mean(r)/sd(r)*Math.sqrt(252):NaN;
+ return{eqS,eqB,ret:s-1,retB:b-1,mdd:dd(eqS),mddB:dd(eqB),sharpe:sh(rs),sharpeB:sh(rb),switches:sw,pctBear:cnt?bear/cnt:NaN,days:cnt}}
+function ols(X,y){const n=X.length,k=X[0].length,A=new Float64Array(k*k),b=new Float64Array(k);
+ for(let i=0;i<n;i++)for(let j=0;j<k;j++){b[j]+=X[i][j]*y[i];for(let l=0;l<k;l++)A[j*k+l]+=X[i][j]*X[i][l]}
+ const beta=solveFlat(A,b,k);let ssr=0,sst=0;const my=mean(y);
+ for(let i=0;i<n;i++){let f=0;for(let j=0;j<k;j++)f+=beta[j]*X[i][j];ssr+=(y[i]-f)**2;sst+=(y[i]-my)**2}
+ const s2=ssr/Math.max(1,n-k),se=[];
+ for(let j=0;j<k;j++){const e=new Float64Array(k);e[j]=1;const col=solveFlat(A,e,k);se.push(Math.sqrt(Math.max(0,s2*col[j])))}
+ return{beta:Array.from(beta),se,r2:sst>0?1-ssr/sst:NaN,n}}
+function olsImpact(D,maxN){const n=D.close.length,names=Object.keys(D.ex||{});if(!names.length)return null;
+ const from=Math.max(6,n-maxN),rows=[],y=[];const meta=names.map(c=>COLMAP[c.toUpperCase()]||(D.ex[c].every(v=>v>0)?{cat:'Sector',label:c,d:'ret',unit:'%',scale:0.01}:{cat:'Sector',label:c,d:'dif',unit:'units',scale:1}));
+ for(let t=from;t<n;t++){const r=[1];names.forEach((c,j)=>{const x=D.ex[c],d=meta[j].d;r.push(d==='ret'?Math.log(x[t]/x[t-1]):d==='dif'?x[t]-x[t-1]:x[t])});rows.push(r);y.push(Math.log(D.close[t]/D.close[t-1]))}
+ const res=ols(rows,y);
+ const sdv=names.map((c,j)=>sd(rows.map(r=>r[j+1])));
+ return{names,meta,sdv,...res}}
+function causalityTest(D,params,tCut){const sub={dates:D.dates.slice(0,tCut+1),close:D.close.slice(0,tCut+1),volume:D.volume?D.volume.slice(0,tCut+1):null,ex:{}};
+ for(const c of Object.keys(D.ex||{}))sub.ex[c]=D.ex[c].slice(0,tCut+1);
+ const run=DD=>{const F=buildFeatures(DD),Y=buildLabels(DD.close,params.H,params.k);return walkForward(F,Y,params)};
+ const a=run(D),b=run(sub);let maxDiff=0,cmp=0;
+ for(let t=0;t<=tCut;t++){if(isFinite(a.P[t])||isFinite(b.P[t])){cmp++;maxDiff=Math.max(maxDiff,Math.abs((a.P[t]||0)-(b.P[t]||0)))}}
+ return{maxDiff,cmp,pass:cmp>0&&maxDiff<1e-9}}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function bizDaysEnding(endISO,n){const out=[];let d=new Date(endISO+'T00:00:00Z');while(out.length<n){const w=d.getUTCDay();if(w!==0&&w!==6)out.push(d.toISOString().slice(0,10));d=new Date(d.getTime()-864e5)}return out.reverse()}
+function makeDemo(seed,n){const rng=mulberry32(seed||7);n=n||1100;
+ const rn=()=>{let u=0;while(!u)u=rng();const v=rng();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+ const dates=bizDaysEnding('2026-11-13',n);
+ const ex={SET:[],USDTHB:[],AAPL:[],TH10Y:[],FFLOW:[],SENT:[]};
+ let setL=1400,fx=35,ap=200,y10=2.4,sent=0,ff=0,vs=0,vi=0,lp=0;const cl=[],vol=[];let ps=0,pf=0;
+ for(let i=0;i<n;i++){vs=0.97*vs+0.15*rn();vi=0.96*vi+0.18*rn();
+  const sm=0.0075*Math.exp(0.6*vs),zm=rn(),mkt=sm*zm;
+  const fxr=0.0032*(-0.35*zm+0.937*rn()),ar=0.015*(0.5*zm+0.866*rn()),dy=0.025*(-0.2*zm+0.98*rn());
+  ff=0.6*ff+3*zm+2*rn();sent=0.8*sent+0.25*(0.5*zm+rn());const sN=Math.tanh(sent);
+  const mo=+dates[i].slice(5,7),seas=(mo>=7&&mo<=10)?0.0008:(mo===11||mo===12?-0.0003:0);
+  const r=seas+0.9*mkt+0.15*ar-0.25*fxr-0.3*dy*0.5+0.004*ps+0.0004*pf+0.0135*Math.exp(0.4*vi)*rn();
+  ps=sN;pf=ff;lp+=r;cl.push(lp);
+  setL*=Math.exp(mkt);fx*=Math.exp(fxr);ap*=Math.exp(ar);y10=Math.max(0.5,y10+dy);
+  ex.SET.push(setL);ex.USDTHB.push(fx);ex.AAPL.push(ap);ex.TH10Y.push(y10);ex.FFLOW.push(ff);ex.SENT.push(sN);
+  vol.push(Math.round(30e6*Math.exp(0.3*rn()+6*Math.abs(r))))}
+ const sc=33/Math.exp(cl[n-1]);const close=cl.map(v=>Math.round(Math.exp(v)*sc*100)/100);
+ return{dates,close,volume:vol,ex,synthetic:true,name:'Synthetic demo'}}
+function parseCSV(text){const lines=text.replace(/\r/g,'').split('\n').filter(l=>l.trim().length);if(lines.length<3)throw new Error('CSV needs a header and at least 2 rows');
+ const split=l=>l.split(',').map(s=>s.trim().replace(/^"|"$/g,''));const h=split(lines[0]);
+ const di=h.findIndex(x=>/^date/i.test(x));let ci=h.findIndex(x=>/^close$/i.test(x));if(ci<0)ci=h.findIndex(x=>/adj/i.test(x));
+ const vi=h.findIndex(x=>/^vol/i.test(x));if(di<0||ci<0)throw new Error('CSV must have Date and Close columns');
+ const exIdx=h.map((x,i)=>i).filter(i=>i!==di&&i!==ci&&i!==vi&&!/^(open|high|low|adj)/i.test(h[i]));
+ let rows=[];for(let i=1;i<lines.length;i++){const c=split(lines[i]);const d=c[di],p=parseFloat(c[ci]);if(!/^\d{4}-\d{2}-\d{2}/.test(d)||!isFinite(p)||p<=0)continue;
+  rows.push({d:d.slice(0,10),p,v:vi>=0?parseFloat(c[vi]):NaN,e:exIdx.map(j=>parseFloat(c[j]))})}
+ rows.sort((a,b)=>a.d<b.d?-1:1);rows=rows.filter((r,i)=>i===0||r.d!==rows[i-1].d);
+ if(rows.length<450)throw new Error('Need ≥ 450 daily rows (≈ 2 years) — got '+rows.length);
+ const ex={};exIdx.forEach((j,k)=>{let last=NaN;const a=rows.map(r=>{if(isFinite(r.e[k]))last=r.e[k];return last});
+  const fv=a.findIndex(isFinite);if(fv>=0){for(let i=0;i<fv;i++)a[i]=a[fv];if(a.every(isFinite))ex[h[j]]=a}});
+ let volume=null;if(vi>=0){let last=NaN;const a=rows.map(r=>{if(isFinite(r.v)&&r.v>0)last=r.v;return last});const fv=a.findIndex(isFinite);if(fv>=0){for(let i=0;i<fv;i++)a[i]=a[fv];volume=a}}
+ return{dates:rows.map(r=>r.d),close:rows.map(r=>r.p),volume,ex,synthetic:false,name:'User CSV'}}
+/*CORE_END*/
+</script>
+
+<script id="ui">
+const $=(s,r=document)=>r.querySelector(s);
+const NS='http://www.w3.org/2000/svg';
+function svg(tag,a){const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);return e}
+function h(tag,a,...kids){const e=document.createElement(tag);for(const k in(a||{})){if(k==='class')e.className=a[k];else if(k==='text')e.textContent=a[k];else e.setAttribute(k,a[k])}for(const c of kids)e.append(c);return e}
+const fp=(x,d=1)=>isFinite(x)?(x*100).toFixed(d)+'%':'—';
+const f2=(x,d=2)=>isFinite(x)?x.toFixed(d):'—';
+const CAT_TAG={Macro:'MAC',Sector:'SEC',Technical:'TEC',Sentiment:'SEN'};
+const Tip={el:$('#tip'),show(e,node){const t=this.el;t.textContent='';t.append(node);t.style.display='block';const r=t.getBoundingClientRect();
+  let x=e.clientX+14,y=e.clientY+14;if(x+r.width>innerWidth-8)x=e.clientX-r.width-14;if(y+r.height>innerHeight-8)y=e.clientY-r.height-14;t.style.left=Math.max(4,x)+'px';t.style.top=Math.max(4,y)+'px'},hide(){this.el.style.display='none'}};
+function tipNode(head,rows){const n=h('div');n.append(h('div',{class:'h',text:head}));for(const r of rows){const d=h('div',{class:'r'});if(r.color){const k=h('span',{class:'k'});k.style.borderColor=r.color;d.append(k)}d.append(h('b',{text:r.value}),h('em',{text:r.name}));n.append(d)}return n}
+function niceTicks(lo,hi,c){const span=hi-lo,raw=span/c,mag=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/mag,st=(f<1.5?1:f<3?2:f<7?5:10)*mag;const out=[];for(let v=Math.ceil(lo/st)*st;v<=hi+1e-9;v+=st)out.push(+v.toPrecision(12));return out}
+
+function lineChart(host,cfg){host.textContent='';host.style.position='relative';
+ const W=Math.max(320,host.clientWidth),Ht=cfg.height||250,m={l:50,r:cfg.rm||76,t:10,b:24},n=cfg.x.length,iw=W-m.l-m.r,ih=Ht-m.t-m.b;
+ let lo=cfg.yMin!=null?cfg.yMin:Infinity,hi=cfg.yMax!=null?cfg.yMax:-Infinity;
+ for(const s of cfg.series)for(const v of s.values)if(isFinite(v)){if(cfg.yMin==null)lo=Math.min(lo,v);if(cfg.yMax==null)hi=Math.max(hi,v)}
+ if(!isFinite(lo)||!isFinite(hi)||lo===hi){lo=0;hi=1}const pad=(hi-lo)*.06;if(cfg.yMin==null)lo-=pad;if(cfg.yMax==null)hi+=pad;
+ const X=i=>m.l+(n>1?i/(n-1):0)*iw,Y=v=>m.t+(1-(v-lo)/(hi-lo))*ih;
+ const s=svg('svg',{viewBox:`0 0 ${W} ${Ht}`,width:W,height:Ht,role:'img','aria-label':cfg.aria||'chart'});
+ for(const v of niceTicks(lo,hi,5)){const y=Y(v);s.append(svg('line',{x1:m.l,x2:W-m.r,y1:y,y2:y,style:'stroke:var(--grid);stroke-width:1'}));
+  const t=svg('text',{x:m.l-6,y:y+4,'text-anchor':'end',style:'fill:var(--muted);font-size:11px'});t.textContent=(cfg.yFmt||(x=>x))(v);s.append(t)}
+ s.append(svg('line',{x1:m.l,x2:W-m.r,y1:m.t+ih,y2:m.t+ih,style:'stroke:var(--axis)'}));
+ const nx=Math.min(6,n);for(let k=0;k<nx;k++){const i=Math.round(k*(n-1)/Math.max(1,nx-1));const t=svg('text',{x:X(i),y:Ht-6,'text-anchor':k===0?'start':k===nx-1?'end':'middle',style:'fill:var(--muted);font-size:11px'});t.textContent=n>260?cfg.x[i].slice(0,7):cfg.x[i].slice(5);s.append(t)}
+ if(cfg.bands){let i=0;while(i<n){if(cfg.bands[i]===1){let j=i;while(j+1<n&&cfg.bands[j+1]===1)j++;const x0=Math.max(m.l,X(i-.5)),x1=Math.min(W-m.r,X(j+.5));s.append(svg('rect',{x:x0,y:m.t,width:x1-x0,height:ih,style:'fill:var(--bear);opacity:.16'}));i=j+1}else i++}}
+ for(const hl of(cfg.hlines||[])){const y=Y(hl.y);s.append(svg('line',{x1:m.l,x2:W-m.r,y1:y,y2:y,style:`stroke:${hl.color||'var(--muted)'};stroke-width:1.5;stroke-dasharray:5 4`}));
+  const t=svg('text',{x:W-m.r+4,y:y+4,style:'fill:var(--ink2);font-size:11px'});t.textContent=hl.label;s.append(t)}
+ const ends=[];
+ for(const sr of cfg.series){let d='',pen=false,last=-1;sr.values.forEach((v,i)=>{if(isFinite(v)){d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);pen=true;last=i}else pen=false});
+  s.append(svg('path',{d,style:`fill:none;stroke:${sr.color};stroke-width:${sr.w||2};stroke-linejoin:round;stroke-linecap:round;${sr.dash?'stroke-dasharray:5 4':''}`}));
+  if(last>=0)ends.push({y:Y(sr.values[last]),name:sr.name,x:X(last)})}
+ ends.sort((a,b)=>a.y-b.y);for(let k=1;k<ends.length;k++)if(ends[k].y-ends[k-1].y<13)ends[k].y=ends[k-1].y+13;
+ if(cfg.series.length>1||cfg.endLabel)for(const e of ends){const t=svg('text',{x:Math.min(e.x+6,W-m.r+6),y:e.y+4,style:'fill:var(--ink2);font-size:11px'});t.textContent=e.name;s.append(t)}
+ const cross=svg('line',{y1:m.t,y2:m.t+ih,style:'stroke:var(--ink2);stroke-width:1;display:none'}),dots=cfg.series.map(sr=>svg('circle',{r:4,style:`fill:${sr.color};stroke:var(--surface);stroke-width:2;display:none`}));
+ s.append(cross,...dots);
+ const ov=svg('rect',{x:m.l,y:m.t,width:iw,height:ih,fill:'transparent',tabindex:0,'aria-label':(cfg.aria||'chart')+' — use arrow keys to inspect values'});s.append(ov);
+ let cur=n-1;
+ const at=(i,ev)=>{i=Math.max(0,Math.min(n-1,i));cur=i;cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.style.display='';
+  cfg.series.forEach((sr,k)=>{const v=sr.values[i];if(isFinite(v)){dots[k].setAttribute('cx',X(i));dots[k].setAttribute('cy',Y(v));dots[k].style.display=''}else dots[k].style.display='none'});
+  const rows=cfg.series.map(sr=>({color:sr.color,name:sr.name,value:isFinite(sr.values[i])?(cfg.vFmt||(x=>x.toFixed(2)))(sr.values[i]):'—'}));
+  if(cfg.tipExtra)rows.push(...cfg.tipExtra(i));
+  const r=host.getBoundingClientRect();Tip.show(ev||{clientX:r.left+X(i),clientY:r.top+Ht/2},tipNode(cfg.x[i],rows))};
+ ov.addEventListener('pointermove',e=>{const r=ov.getBoundingClientRect();at(Math.round((e.clientX-r.left)/iw*(n-1)),e)});
+ ov.addEventListener('pointerleave',()=>{cross.style.display='none';dots.forEach(d=>d.style.display='none');Tip.hide()});
+ ov.addEventListener('focus',()=>at(cur));ov.addEventListener('blur',()=>{cross.style.display='none';dots.forEach(d=>d.style.display='none');Tip.hide()});
+ ov.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){at(cur-1);e.preventDefault()}else if(e.key==='ArrowRight'){at(cur+1);e.preventDefault()}});
+ host.append(s)}
+
+function radarChart(host,axes){host.textContent='';const W=Math.max(320,host.clientWidth),Ht=Math.min(520,Math.max(380,W*.92)),cx=W/2,cy=Ht/2,R=Math.min(W/2-118,Ht/2-48),N=axes.length;
+ const s=svg('svg',{viewBox:`0 0 ${W} ${Ht}`,width:W,height:Ht,role:'img','aria-label':'Driver radar: outward is more bearish'});
+ const pt=(i,v)=>{const a=-Math.PI/2+2*Math.PI*i/N;return[cx+R*v/100*Math.cos(a),cy+R*v/100*Math.sin(a)]};
+ for(const rv of[25,50,75,100]){const p=axes.map((_,i)=>pt(i,rv).join(',')).join(' ');s.append(svg('polygon',{points:p,style:`fill:none;stroke:${rv===50?'var(--ink2)':'var(--grid)'};stroke-width:${rv===50?1.4:1};${rv===50?'stroke-dasharray:4 3':''}`}))}
+ 
+ axes.forEach((a,i)=>{const[x,y]=pt(i,100);s.append(svg('line',{x1:cx,y1:cy,x2:x,y2:y,style:'stroke:var(--grid)'}));
+  const[lx,ly]=pt(i,113),t=svg('text',{x:lx,y:ly+4,'text-anchor':Math.abs(lx-cx)<8?'middle':lx<cx?'end':'start',style:'fill:var(--ink);font-size:11px'});t.textContent=a.label;s.append(t);
+  const tg=svg('text',{x:lx,y:ly+15,'text-anchor':t.getAttribute('text-anchor'),style:'fill:var(--muted);font-size:9.5px;font-weight:700'});tg.textContent=CAT_TAG[a.cat]||'';s.append(tg)});
+ const poly=(k,style)=>svg('polygon',{points:axes.map((a,i)=>pt(i,a[k]).join(',')).join(' '),style});
+ s.append(poly('v1','fill:none;stroke:var(--muted);stroke-width:1.6;stroke-dasharray:5 4'),poly('v0','fill:var(--ink);fill-opacity:.12;stroke:var(--ink);stroke-width:2.2;stroke-linejoin:round'));
+ axes.forEach((a,i)=>{const[x,y]=pt(i,a.v0);const c=svg('circle',{cx:x,cy:y,r:4.5,style:'fill:var(--ink);stroke:var(--surface);stroke-width:2'});
+  const hit=svg('circle',{cx:x,cy:y,r:14,fill:'transparent',tabindex:0,'aria-label':`${a.label}: ${a.tipRows}`});
+  const show=e=>{const r=hit.getBoundingClientRect();Tip.show(e.clientX!=null&&e.type!=='focus'?e:{clientX:r.left,clientY:r.top},tipNode(a.label+' ['+a.cat+']',[{name:'Pressure (50 = neutral)',value:a.v0.toFixed(0)},{name:'Contribution to logit',value:a.cs},{name:'5 days ago',value:a.v1.toFixed(0)}]))};
+  hit.addEventListener('pointermove',show);hit.addEventListener('focus',show);hit.addEventListener('pointerleave',()=>Tip.hide());hit.addEventListener('blur',()=>Tip.hide());s.append(c,hit)});
+ host.append(s)}
+
+/* ---------------- state ---------------- */
+const S={data:null,P:{},res:null,win:252,valid:null};
+function params(){return{H:+$('#pH').value,k:+$('#pK').value,cr:+$('#pC').value,delta:+$('#pD').value,confirm:+$('#pN').value,cost:(+$('#pF').value||0)/1e4,minTrain:252,refit:21,lam:10}}
+function compute(){const D=S.data,p=params();S.P=p;const F=buildFeatures(D),Y=buildLabels(D.close,p.H,p.k),WF=walkForward(F,Y,p);
+ const theta=1/(1+p.cr);const state=regimeSeries(WF.P,theta,p.delta,p.confirm);
+ S.res={F,Y,WF,theta,state};S.res.causal=null}
+function fromIdx(){const n=S.data.close.length;const firstOOS=S.res.WF.P.findIndex(isFinite);const w=S.win;let f=w?n-w:0;return Math.max(f,firstOOS<0?0:firstOOS)}
+
+function render(){if(!S.res)return;renderHero();renderCharts();renderRadar();renderAlerts();renderHealth();renderImpact();renderRegime();renderBrief()}
+function renderHero(){const{WF,state,theta,F}=S.res,D=S.data,n=D.close.length,t=n-1,P=WF.P[t],st=state[t];
+ const hero=$('#hero');hero.textContent='';
+ const b=h('div',{class:'badge '+(isFinite(st)?(st===1?'bear':'bull'):'na'),text:isFinite(st)?(st===1?'▼ BEAR':'▲ BULL'):'NO SIGNAL'});
+ let days=0;if(isFinite(st)){for(let i=t;i>=0&&state[i]===st;i--)days++}
+ const chg=D.close[t]/D.close[t-1]-1;
+ const k=(v,l)=>h('div',{class:'kpi'},h('div',{class:'v',text:v}),h('div',{class:'l',text:l}));
+ const lastModel=WF.models.length?WF.models[WF.models.length-1]:null;
+ hero.append(b,h('div',{class:'kpis'},k(f2(D.close[t]),'Last close (THB) · '+D.dates[t]+(D.synthetic?' · synthetic':'')),k((chg>=0?'▲ ':'▼ ')+fp(Math.abs(chg),2),'1-day move'),
+  k(fp(P,0),'P(Bear) next '+S.P.H+'d (entry θ = '+fp(theta,0)+')'),k(days?days+' d':'—','In current regime'),k(lastModel?D.dates[lastModel.T]:'—','Last model refit')));
+ const chip=$('#srcChip');chip.textContent=D.synthetic?'SYNTHETIC DEMO DATA':'Data: '+D.name+' · '+D.dates[0]+' → '+D.dates[n-1];chip.className='chip '+(D.synthetic?'warn':'pass')}
+function renderCharts(){const{WF,state,theta,F}=S.res,D=S.data,n=D.close.length,from=Math.max(0,n-(S.win||n)),sl=a=>a.slice(from);
+ const x=sl(D.dates),close=sl(D.close),sma50=sl(F.s50),pb=sl(WF.P),bands=sl(state).map(v=>v===1?1:0);
+ $('#lgPrice').innerHTML='<span><i style="border-color:var(--ink)"></i>Close (THB)</span><span><i style="border-color:var(--s2)"></i>50-day MA</span><span><i class="sh" style="background:var(--bear)"></i>▼ Bear regime (shaded)</span>';
+ lineChart($('#chPrice'),{x,series:[{name:'Close',color:'var(--ink)',values:close},{name:'MA50',color:'var(--s2)',values:sma50,w:1.6}],bands,height:330,aria:'COM7 close with Bear regime shading',yFmt:v=>v.toFixed(0),
+  tipExtra:i=>{const st=sl(state)[i];return[{name:'P(Bear)',value:fp(pb[i],0)},{name:'Regime',value:isFinite(st)?(st===1?'▼ Bear':'▲ Bull'):'n/a'}]}});
+ lineChart($('#chProb'),{x,series:[{name:'P(Bear)',color:'var(--bear)',values:pb}],yMin:0,yMax:1,height:210,aria:'Probability of Bear regime',yFmt:v=>(v*100).toFixed(0)+'%',vFmt:v=>fp(v,1),rm:92,
+  hlines:[{y:theta,label:'θ entry '+fp(theta,0),color:'var(--bear)'},{y:Math.max(0,theta-S.P.delta),label:'exit '+fp(Math.max(0,theta-S.P.delta),0),color:'var(--muted)'}]});
+ const rows=[];for(let i=n-1;i>=Math.max(0,n-40);i--)rows.push(`<tr><td>${D.dates[i]}</td><td class="n">${D.close[i].toFixed(2)}</td><td class="n">${isFinite(WF.P[i])?fp(WF.P[i],1):'—'}</td><td>${isFinite(state[i])?(state[i]?'▼ Bear':'▲ Bull'):'—'}</td></tr>`);
+ $('#tblPrice').innerHTML='<table><tr><th>Date</th><th class="n">Close</th><th class="n">P(Bear)</th><th>Regime</th></tr>'+rows.join('')+'</table>'}
+function renderRadar(){const{F,WF}=S.res,n=S.data.close.length,t=n-1,c0=contribAt(F,WF,t),c1=contribAt(F,WF,t-5),box=$('#chContrib');
+ if(!c0){$('#chRadar').textContent='Not enough history for a model yet.';box.textContent='';return}
+ const sc=c=>50+50*Math.tanh(c/0.8),order=['Macro','Sector','Technical','Sentiment'];
+ const axes=[...c0].sort((a,b)=>order.indexOf(a.cat)-order.indexOf(b.cat)).map(a=>{const b=c1?c1.find(q=>q.name===a.name):null;return{label:a.label.replace(' 5d chg','').replace(' 5d Δ','').replace(' 5d Σ','').replace(' 3d avg',''),cat:a.cat,v0:sc(a.c),v1:b?sc(b.c):50,cs:(a.c>=0?'+':'')+a.c.toFixed(2),tipRows:a.c.toFixed(2)}});
+ radarChart($('#chRadar'),axes);
+ const rows=[...c0].sort((a,b)=>Math.abs(b.c)-Math.abs(a.c)).slice(0,10),mx=Math.max(0.3,...rows.map(r=>Math.abs(r.c)));box.textContent='';
+ for(const r of rows){const row=h('div',{class:'cb-row',tabindex:0});const lab=h('div');lab.append(h('span',{class:'tag',text:CAT_TAG[r.cat]||''}),document.createTextNode(r.label));
+  const tr=h('div',{class:'cb-track'}),bar=h('div',{class:'cb-bar'+(r.c<0?' neg':'')}),wd=Math.abs(r.c)/mx*50;bar.style.width=wd+'%';bar.style.background=r.c>=0?'var(--bear)':'var(--bull)';bar.style[r.c>=0?'left':'right']='50%';tr.append(bar);
+  const val=h('div',{class:'cb-val',text:(r.c>=0?'▼ +':'▲ ')+r.c.toFixed(2)});row.append(lab,tr,val);
+  const sh=e=>Tip.show(e.clientX!=null&&e.type!=='focus'?e:{clientX:row.getBoundingClientRect().left+200,clientY:row.getBoundingClientRect().top},tipNode(r.label,[{name:'Raw value',value:r.raw.toPrecision(3)},{name:'Std. value (z)',value:r.z.toFixed(2)},{name:'Model weight',value:r.w.toFixed(2)},{name:'Contribution (logit)',value:r.c.toFixed(2)}]));
+  row.addEventListener('pointermove',sh);row.addEventListener('focus',sh);row.addEventListener('pointerleave',()=>Tip.hide());row.addEventListener('blur',()=>Tip.hide());box.append(row)}}
+function renderAlerts(){const{F,WF}=S.res,D=S.data,n=D.close.length,t=n-1,A=[],P=D.close;
+ const add=(sev,txt)=>A.push({sev,txt});
+ const rsi=F.rsi[t];if(rsi>70)add('WARN','RSI(14) = '+rsi.toFixed(0)+' — overbought zone.');else if(rsi<30)add('WATCH','RSI(14) = '+rsi.toFixed(0)+' — oversold zone.');
+ if(F.s50[t]&&P[t]<F.s50[t])add('WARN','Close is below the 50-day average ('+f2(F.s50[t])+').');else if(F.s50[t])add('OK','Close is above the 50-day average ('+f2(F.s50[t])+').');
+ if(F.s200[t]&&P[t]<F.s200[t])add('WARN','Close is below the 200-day average — long-term trend weak.');
+ let mx=-Infinity;for(let i=Math.max(0,t-59);i<=t;i++)mx=Math.max(mx,P[i]);const dd=P[t]/mx-1;if(dd<-0.1)add('WARN','Drawdown from 60-day high: '+fp(dd,1)+'.');
+ const rvs=F.rv.filter(isFinite);const rank=rvs.filter(v=>v<=F.rv[t]).length/rvs.length;if(rank>0.9)add('WARN','Realised volatility in top decile of its history ('+fp(F.rv[t],0)+' annualised).');
+ if(D.volume){const lv=D.volume.slice(t-59,t+1).map(v=>Math.log(v));const z=(Math.log(D.volume[t])-mean(lv))/sd(lv);if(Math.abs(z)>2)add('WATCH','Volume is '+z.toFixed(1)+'σ vs its 60-day norm.')}
+ if(D.ex.USDTHB){const c=Math.log(D.ex.USDTHB[t]/D.ex.USDTHB[t-5]);if(Math.abs(c)>0.015)add('WATCH','USD/THB moved '+fp(c,1)+' in 5 days — watch Apple Thailand pricing/margin commentary.')}
+ const md=D.dates[t].slice(5);if(md>='07-01'&&md<='10-15')add('INFO','Inside the Jul 1–Oct 15 launch run-up window (historically strong; crowded).');
+ else add('INFO','Outside the Jul 1–Oct 15 run-up window — post-launch digestion phase; Q4 results/holiday sell-through now drive expectations.');
+ const P0=WF.P[t];if(isFinite(P0)){const b=S.res.WF.models.length?S.res.WF.models[S.res.WF.models.length-1].baseRate:NaN;add(P0>S.res.theta?'WARN':'OK','P(Bear) '+fp(P0,0)+' vs historical Bear base rate '+fp(b,0)+'.')}
+ if(D.synthetic)add('WARN','Synthetic data loaded — none of these readings describe the real COM7.');
+ const box=$('#alerts');box.textContent='';for(const a of A)box.append(h('div',{class:'alert'},h('span',{class:'ic',text:({WARN:'▲ WARN',WATCH:'● WATCH',OK:'✔ OK',INFO:'ℹ INFO'})[a.sev]}),h('span',{text:a.txt})))}
+function healthItems(){const R=S.res,from=fromIdx(),ev=evalOOS(R.WF,R.Y,R.state,from),D=S.data,n=D.close.length,it=[];
+ const add=(st,name,det)=>it.push({st,name,det});
+ add(R.WF.audit.violations===0&&R.WF.audit.refits>0?'pass':'fail','No label leakage in training',R.WF.audit.refits+' refits; every training label fully realised before its refit date (violations: '+R.WF.audit.violations+').');
+ if(R.causal)add(R.causal.pass?'pass':'fail','Causality test (truncate-and-replay)',R.causal.pass?'Predictions up to day t are identical with and without later data (max diff '+R.causal.maxDiff.toExponential(1)+', '+R.causal.cmp+' days).':'Predictions changed when future data was removed — look-ahead bug.');
+ else add('warn','Causality test','Not run yet — press “Run causality test”.');
+ if(!ev.ok){add('warn','Out-of-sample sample size','Too few labelled OOS days in view ('+ev.n+') — widen the window.')}
+ else{add(ev.n>=250?'pass':'warn','OOS sample size',ev.n+' labelled days (overlapping labels ⇒ effective ≈ '+Math.round(ev.n/S.P.H)+').');
+  add(ev.auc>=0.55?'pass':ev.auc>=0.5?'warn':'fail','Discrimination (AUC)',f2(ev.auc,3)+' (0.5 = coin-flip).');
+  add(ev.skill>0.02?'pass':ev.skill>0?'warn':'fail','Brier skill vs base rate',fp(ev.skill,1)+' (≤ 0 ⇒ no better than always predicting the base rate).');
+  add(ev.ece<=0.06?'pass':ev.ece<=0.1?'warn':'fail','Calibration error (ECE)',f2(ev.ece,3)+' — threshold logic assumes calibrated P.')}
+ const lag=(Date.now()-new Date(D.dates[n-1]+'T00:00:00Z'))/864e5;
+ add(D.synthetic?'warn':lag<=4?'pass':'fail','Data freshness',D.synthetic?'Synthetic series — not live.':'Last bar '+D.dates[n-1]+' ('+Math.round(lag)+' days ago).');
+ return it}
+function renderHealth(){const it=healthItems(),box=$('#health');box.textContent='';
+ for(const x of it)box.append(h('div',{class:'alert'},h('span',{class:'ic'},h('span',{class:'chip '+x.st,text:({pass:'✔ PASS',warn:'▲ WARN',fail:'✖ FAIL'})[x.st]})),h('span',{},h('b',{text:x.name+' — '}),document.createTextNode(x.det))));
+ const b=h('button',{class:'btn',type:'button',style:'margin-top:8px',text:'Run causality test'});b.onclick=()=>{b.textContent='Running…';setTimeout(()=>{S.res.causal=causalityTest(S.data,S.P,Math.floor(S.data.close.length*0.8));renderHealth()},20)};box.append(b)}
+
+/* ---------- Impact ---------- */
+const VAL={rev:98224,gm:14.0,sga:7.7,oth:-250,tax:20,sh:2404,pe:null,px:null,ke:10.5,g:5,pay:70};
+function valCalc(o){const gp=o.rev*o.gm/100,np=(gp-o.rev*o.sga/100+o.oth)*(1-o.tax/100);return{gp,np,eps:np/o.sh}}
+function renderImpact(){const D=S.data,n=D.close.length;if(VAL.px===null||VAL.synthetic!==D.synthetic){VAL.px=D.close[n-1];VAL.synthetic=D.synthetic;const e=valCalc(VAL).eps;VAL.pe=+(VAL.px/e).toFixed(1)}
+ // OLS
+ const im=olsImpact(D,504),box=$('#sliders'),out=$('#whatifOut'),bt=$('#betaTbl');S.ols=im;
+ if(!im){box.textContent='Add exogenous columns (e.g. SET, USDTHB, AAPL…) to the CSV to enable driver what-ifs.';bt.textContent='';out.textContent=''}
+ else{
+  bt.innerHTML='<table><tr><th>Driver</th><th class="n">β (per 1.00)</th><th class="n">t-stat</th></tr>'+im.names.map((c,j)=>{const t=im.beta[j+1]/im.se[j+1];return`<tr><td><span class="tag">${CAT_TAG[im.meta[j].cat]||''}</span>${im.meta[j].label}</td><td class="n">${im.beta[j+1].toFixed(3)}</td><td class="n">${Math.abs(t)>=2?'<b>'+t.toFixed(1)+'</b>':t.toFixed(1)}</td></tr>`}).join('')+`</table><p class="small muted">R² = ${f2(im.r2,2)} on ${im.n} days. Unit: COM7 log-return per 1.00 change in the driver’s daily variable.</p>`;
+  if(!S.shocks||S.shocksFor!==D)S.shocks=im.names.map(()=>0);S.shocksFor=D;
+  box.textContent='';im.names.forEach((c,j)=>{const mt=im.meta[j],lim=Math.max(0.1,Math.ceil(3*im.sdv[j]/mt.scale*10)/10),step=lim/50;
+   const r=h('input',{type:'range',min:-lim,max:lim,step,value:S.shocks[j],'aria-label':mt.label+' shock'});const lab=h('div',{},h('span',{class:'tag',text:CAT_TAG[mt.cat]||''}),document.createTextNode(mt.label+' ('+mt.unit+')'));const val=h('div',{class:'cb-val',text:(+S.shocks[j]).toFixed(2)+' '+mt.unit});
+   r.oninput=()=>{S.shocks[j]=+r.value;val.textContent=(+r.value).toFixed(2)+' '+mt.unit;whatif()};box.append(h('div',{class:'slider-row'},lab,r,val))});
+  const rs=h('button',{class:'btn',type:'button',text:'Reset shocks'});rs.onclick=()=>{S.shocks=im.names.map(()=>0);renderImpact()};box.append(rs);whatif()}
+ // valuation
+ const vi=$('#valInputs');vi.textContent='';const fld=(k,l,st)=>{const i=h('input',{type:'number',value:VAL[k],step:st||'any',style:'width:100px;background:var(--page);color:var(--ink);border:1px solid var(--axis);border-radius:5px;padding:4px 6px'});i.oninput=()=>{VAL[k]=+i.value;valOut()};vi.append(h('label',{style:'display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12.5px'},h('span',{text:l}),i))};
+ fld('rev','Revenue FY26E (THB m)',100);fld('gm','Gross margin (%)',0.1);fld('sga','SG&A / revenue (%)',0.1);fld('oth','Other, net of interest (THB m)',10);fld('tax','Tax rate (%)',1);fld('sh','Shares (m)',10);fld('pe','Target P/E (×)',0.5);fld('px','Reference price (THB)',0.25);fld('ke','Cost of equity (%)',0.25);fld('g','Long-run growth (%)',0.25);fld('pay','Payout ratio (%)',5);
+ valOut();$('#pos').oninput=whatif}
+function whatif(){const im=S.ols;if(!im)return;let tot=0;const parts=[];im.names.forEach((c,j)=>{const mt=im.meta[j],e=im.beta[j+1]*S.shocks[j]*mt.scale;tot+=e;parts.push({l:mt.label,e})});
+ const pos=+$('#pos').value||0,px=S.data.close[S.data.close.length-1];
+ $('#whatifOut').innerHTML=`<table><tr><th>Scenario (one-day, others held at 0)</th><th class="n">COM7 move</th><th class="n">THB P&amp;L on position</th><th class="n">Implied close</th></tr>
+ <tr><td><b>Total of all shocks</b></td><td class="n"><b>${tot>=0?'▲ +':'▼ '}${fp(Math.abs(tot),2)}</b></td><td class="n"><b>${(pos*(Math.exp(tot)-1)).toLocaleString('en',{maximumFractionDigits:0})}</b></td><td class="n">${(px*Math.exp(tot)).toFixed(2)}</td></tr>
+ ${parts.filter(p=>Math.abs(p.e)>1e-7).map(p=>`<tr><td>&nbsp;&nbsp;${p.l}</td><td class="n">${p.e>=0?'+':''}${fp(p.e,2)}</td><td class="n">${(pos*(Math.exp(p.e)-1)).toLocaleString('en',{maximumFractionDigits:0})}</td><td></td></tr>`).join('')}</table>
+ <p class="small muted">Linear, same-day, ignores non-linearity and shocks that coincide with news only the stock reacts to.</p>`}
+function valOut(){const b=valCalc(VAL),tp=VAL.pe*b.eps,px=VAL.px;
+ const sens=(patch)=>{const o={...VAL,...patch};return valCalc(o)};
+ const dGM=sens({gm:VAL.gm+0.1}),dRev=sens({rev:VAL.rev*1.01}),dSGA=sens({sga:VAL.sga+0.1});
+ const heatGM=[-0.6,-0.3,0,0.3,0.6].map(d=>VAL.gm+d),heatPE=[-3,-1.5,0,1.5,3].map(d=>VAL.pe+d);
+ let t=`<table><tr><th>FY26E base</th><th class="n">Gross profit</th><th class="n">Net profit</th><th class="n">EPS</th><th class="n">P/E @ ref price</th><th class="n">Value @ target P/E</th></tr><tr><td>THB m / THB</td><td class="n">${b.gp.toFixed(0)}</td><td class="n">${b.np.toFixed(0)}</td><td class="n">${b.eps.toFixed(2)}</td><td class="n">${(px/b.eps).toFixed(1)}×</td><td class="n">${tp.toFixed(2)} (${fp(tp/px-1,0)})</td></tr></table>`;
+ t+=`<h3>Implied share price: gross margin × P/E</h3><table class="heat"><tr><td class="hd">GM ↓ / P/E →</td>${heatPE.map(p=>`<td class="hd">${p.toFixed(1)}×</td>`).join('')}</tr>`;
+ for(const g of heatGM){const e=valCalc({...VAL,gm:g}).eps;t+=`<tr><td class="hd">${g.toFixed(1)}%</td>${heatPE.map(p=>{const v=p*e,d=v/px-1,a=Math.min(70,Math.abs(d)*220);return`<td style="background:color-mix(in srgb,var(${d>=0?'--bull':'--bear'}) ${a}%,transparent)">${v.toFixed(1)}<br><span class="small">${d>=0?'▲ +':'▼ '}${(Math.abs(d)*100).toFixed(0)}%</span></td>`}).join('')}</tr>`}
+ t+='</table><p class="small muted">Blue ▲ = above reference price, red ▼ = below.</p>';$('#valOut').innerHTML=t;S.vsens={b,dGM,dRev,dSGA,tp,px};renderBrief()}
+function renderBrief(){const v=S.vsens;if(!v)return;const{b,dGM,dRev,dSGA}=v,pe=VAL.pe,e=VAL.ke/100,g=VAL.g/100,po=VAL.pay/100;
+ const jpe=po*(1+g)/(e-g),jpe2=po*(1+g)/(e+0.005-g);
+ const row=(a,m,l,s)=>`<tr><td><b>${a}</b></td><td>${m}</td><td>${l}</td><td>${s}</td></tr>`;
+ $('#fiTbl').innerHTML='<tr><th>Driver shift</th><th>Transmission</th><th>P&amp;L / valuation line</th><th>Illustrative size (live)</th></tr>'+
+ row('Gross margin +10 bp','Apple mix, price resets, promo intensity, inventory timing','Gross profit → net profit',`Net profit ${(dGM.np-b.np>=0?'+':'')}${(dGM.np-b.np).toFixed(0)} m (${fp(dGM.np/b.np-1,1)}); EPS ${(dGM.eps-b.eps>=0?'+':'')}${(dGM.eps-b.eps).toFixed(3)}; value at ${pe}× ≈ ${(pe*(dGM.eps-b.eps)).toFixed(2)} THB/share`)+
+ row('Revenue +1% (unit volume)','iPhone allocation/launch demand; same-store growth','Operating leverage — SG&amp;A largely fixed (rent, staff)',`Net profit +${(dRev.np-b.np).toFixed(0)} m (${fp(dRev.np/b.np-1,1)}) with SG&amp;A scaling in proportion; the lift is larger to the extent rent/staff costs are fixed`)+
+ row('SG&amp;A +10 bp of revenue','Store openings, wage/rent inflation, marketing','Operating margin',`Net profit ${(dSGA.np-b.np).toFixed(0)} m (${fp(dSGA.np/b.np-1,1)}); EPS ${(dSGA.eps-b.eps).toFixed(3)}`)+
+ row('Cost of equity +50 bp','Rates ↑, risk premium ↑ (D/E ≈ 0.9×; financing book funded by debt)','Justified multiple (Gordon: P/E = payout·(1+g)/(ke−g))',`Justified P/E ${jpe.toFixed(1)}× → ${jpe2.toFixed(1)}× (${fp(jpe2/jpe-1,1)}) at ke ${VAL.ke}%, g ${VAL.g}%, payout ${VAL.pay}%`)+
+ row('USD/THB ↑ (THB weaker)','Apple Thailand list-price resets and imported inventory; demand elasticity','Gross margin timing vs. unit demand','Sign is <i>ambiguous</i> in theory (short-run margin help on existing stock, later demand risk); read the fitted β in Impact tab')+
+ row('Consumer-credit stress','NPL rise in UFUND/instalment book; cut in approvals','Credit cost, non-IT earnings growth','Each +1 pp NPL on the loan book is a direct provision charge — track NPL ratio (&lt;1% reported at Q1-26) monthly/quarterly')+
+ row('Sentiment / foreign flows','Risk appetite, positioning, liquidity','Multiple (P/E) and intraday volatility — not earnings','At 16–18× P/E a ±1.5× re-rating is ≈ ±9% on price with no change in earnings (see heat-map)')}
+function renderRegime(){const R=S.res,from=fromIdx(),ev=evalOOS(R.WF,R.Y,R.state,from),p=S.P;
+ $('#regimeLive').innerHTML=`<b>Live parameters:</b> H = ${p.H} d · k = ${p.k} · cost ratio ${p.cr}:1 ⇒ <b>θ = 1/(1+${p.cr}) = ${f2(R.theta,3)}</b> · exit = θ − ${p.delta} = ${f2(Math.max(0,R.theta-p.delta),3)} · confirm = ${p.confirm} close(s) · λ = ${p.lam} · refit every ${p.refit} d (min train ${p.minTrain} d).`;
+ const k=(v,l)=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+ if(!ev.ok){$('#oosKpis').innerHTML='Not enough out-of-sample days in this window.';$('#calTbl').textContent='';$('#condTbl').textContent='';$('#thrTbl').textContent='';$('#chEq').textContent='';$('#eqKpis').textContent='';return}
+ $('#oosKpis').innerHTML=k(f2(ev.auc,3),'AUC (0.5 = chance)')+k(f2(ev.brier,3)+' vs '+f2(ev.brierBase,3),'Brier: model vs base rate')+k(fp(ev.skill,1),'Brier skill')+k(fp(ev.baseRate,0),'Bear base rate')+k(f2(ev.ece,3),'Calibration error');
+ $('#calTbl').innerHTML='<table><tr><th>P(Bear) bin</th><th class="n">Days</th><th class="n">Mean predicted</th><th class="n">Realised Bear</th></tr>'+ev.bins.map((q,i)=>q.n?`<tr><td>${i*10}–${i*10+10}%</td><td class="n">${q.n}</td><td class="n">${fp(q.p/q.n,0)}</td><td class="n">${fp(q.y/q.n,0)}</td></tr>`:'').join('')+'</table>';
+ const c=ev.cond,fw=a=>a.length?fp(mean(a),2):'—';
+ $('#condTbl').innerHTML=`<table><tr><th>Regime</th><th class="n">Days</th><th class="n">Mean fwd ${p.H}d return</th><th class="n">Share labelled Bear</th></tr><tr><td>▼ Bear</td><td class="n">${c.bear.n}</td><td class="n">${fw(c.bear.fwd)}</td><td class="n">${c.bear.y?fp(c.bear.hit/c.bear.y,0):'—'}</td></tr><tr><td>▲ Bull</td><td class="n">${c.bull.n}</td><td class="n">${fw(c.bull.fwd)}</td><td class="n">${c.bull.y?fp(c.bull.hit/c.bull.y,0):'—'}</td></tr></table><p class="small muted">Precision ${fp(ev.precision,0)} · recall ${fp(ev.recall,0)}. Overlapping ${p.H}-day windows: treat differences as descriptive, not statistically proven.</p>`;
+ const ths=[0.2,0.25,1/3,0.4,0.5];let tr='<table><tr><th>θ</th><th class="n">% days Bear</th><th class="n">Precision</th><th class="n">Recall</th><th class="n">Switches</th><th class="n">Max DD</th></tr>';
+ for(const th of ths){const st=regimeSeries(R.WF.P,th,Math.min(p.delta,th),p.confirm),e=evalOOS(R.WF,R.Y,st,from),sm=simulate(S.data.close,st,from,p.cost);tr+=`<tr><td>${f2(th,2)}</td><td class="n">${sm?fp(sm.pctBear,0):'—'}</td><td class="n">${fp(e.precision,0)}</td><td class="n">${fp(e.recall,0)}</td><td class="n">${sm?sm.switches:'—'}</td><td class="n">${sm?fp(sm.mdd,0):'—'}</td></tr>`}
+ $('#thrTbl').innerHTML=tr+'</table><p class="small muted">Lower θ ⇒ more Bear days and higher recall but more false alarms and switch costs — the trade-off the cost ratio encodes.</p>';
+ const sm=simulate(S.data.close,R.state,from,p.cost);if(!sm)return;const n=S.data.close.length,sl=a=>a.slice(from);
+ $('#lgEq').innerHTML='<span><i style="border-color:var(--s1)"></i>Rule-based (Bull = hold, Bear = cash)</span><span><i style="border-color:var(--s2)"></i>Buy &amp; hold</span>';
+ lineChart($('#chEq'),{x:sl(S.data.dates),series:[{name:'Rule',color:'var(--s1)',values:sl(sm.eqS)},{name:'Buy&hold',color:'var(--s2)',values:sl(sm.eqB)}],height:240,aria:'Equity curves',yFmt:v=>v.toFixed(2),vFmt:v=>v.toFixed(3)});
+ $('#eqKpis').innerHTML=k(fp(sm.ret,0)+' / '+fp(sm.retB,0),'Total return: rule / buy&hold')+k(fp(sm.mdd,0)+' / '+fp(sm.mddB,0),'Max drawdown')+k(f2(sm.sharpe,2)+' / '+f2(sm.sharpeB,2),'Sharpe (rf = 0)')+k(sm.switches,'Switches')+k(fp(sm.pctBear,0),'Time in Bear')}
+function renderDrivers(){const rows=[
+ ['Macro','SET index return (1d/5d)','Daily','SET','5-day log change','Positive co-movement','Market beta and risk appetite for Thai equities.','Yes (SET)'],
+ ['Macro','USD/THB','Daily','BoT / vendor','5-day log change','Ambiguous','Apple Thailand price resets and imported inventory; THB weakness can lift near-term margin then hurt demand.','Yes (USDTHB)'],
+ ['Macro','TH 10Y government yield','Daily','ThaiBMA','5-day change','Negative','Cost of equity/debt; consumer credit and instalment affordability; multiple compression.','Yes (TH10Y)'],
+ ['Macro','BoT policy-rate decision / OIS surprise','Event','BoT, OIS','Surprise (bp) on event day','Negative','Unexpected tightening hits leveraged retail and multiples.','No (add as column)'],
+ ['Macro','Global risk gauge (VIX)','Daily','CBOE','5-day log change','Negative','Foreign de-risking hits Thai mid-caps first.','Auto if VIX column supplied'],
+ ['Macro','Consumer confidence / retail sales / private consumption','Monthly','BoT, TCC-CI','Step on release date','Positive','Demand backdrop for discretionary tech; use release-date stamping.','No'],
+ ['Sector','Apple (AAPL) return','Daily','Exchange','5-day log change','Positive','Global demand/sentiment read-through for the supplier ecosystem.','Yes (AAPL)'],
+ ['Sector','iPhone launch calendar (days since/until launch, pre-order window)','Event','Apple, COM7 IR','Days-to-event; window dummies','Positive pre-launch','Seasonal run-up and Q4 sell-through; brokers cite a strong Jul–mid-Oct pattern.','Seasonal alert only'],
+ ['Sector','Apple Thailand price changes / allocation news','Event','Apple TH, press','Event dummy','Ambiguous','Direct margin and stock-availability effect.','No'],
+ ['Sector','Competitor relative strength (e.g. ADVICE, JMART)','Daily','SET','Relative 20d return','Positive','Sector rotation; confirms or contradicts stock-specific moves.','Add as column'],
+ ['Sector','Thai smartphone shipments / Apple market share','Monthly','IDC, Canalys','YoY change, release-dated','Positive','Volume and share trend.','No'],
+ ['Sector','UFUND loan growth, NPL, iCare insurance premium','Quarterly','Company','Surprise vs trend','Positive growth, negative NPL','Non-IT earnings diversification and credit risk.','No'],
+ ['Sector','Government stimulus / tax-deduction schemes','Event','MoF','Event dummy','Positive','Past co-payment/e-receipt schemes boosted Q1 demand.','No'],
+ ['Technical','5d / 20d return, RSI(14), MACD histogram','Daily','Price','Standardised','Momentum / mean-reversion','Short-horizon continuation vs exhaustion.','Yes'],
+ ['Technical','Distance to 50d and 200d moving average','Daily','Price','ln(P/MA)','Positive','Trend regime filter.','Yes'],
+ ['Technical','Realised volatility (20d, annualised)','Daily','Price','σ·√252','Negative','Vol clustering; drawdown risk rises with vol.','Yes'],
+ ['Technical','Volume z-score (60d)','Daily','SET','z of ln(volume)','Context-dependent','Confirmation / capitulation.','Yes (if Volume column)'],
+ ['Technical','Drawdown from 60d high','Daily','Price','ln(P/max)','Negative','Distance from recent peak.','Yes'],
+ ['Technical','Bollinger %B, ATR %, gap size, OBV slope','Daily','Price','Standardised','Mixed','Optional extensions; test for incremental OOS value only.','No'],
+ ['Sentiment','Foreign net buy/sell (SET)','Daily','SET','5-day sum (THB bn)','Positive','Marginal price setter for Thai large/mid-caps.','Yes (FFLOW)'],
+ ['Sentiment','News/Thai-language NLP sentiment','Daily','Licensed NLP feed','3-day average','Positive','Captures launch buzz and allocation headlines; needs timestamp discipline.','Yes (SENT)'],
+ ['Sentiment','Short-sale ratio / SET50 options put-call','Daily','SET','z-score','Negative','Positioning and hedging demand.','No'],
+ ['Sentiment','Broker revisions (target-price/rating breadth)','Event','Vendor','30-day net revisions','Positive','Earnings-expectation momentum.','No'],
+ ['Sentiment','Search interest (e.g. “iPhone 18 Thailand”)','Daily/Weekly','Google Trends','Z-score','Positive pre-launch','Demand proxy; noisy.','No']];
+ $('#drvTbl').innerHTML='<tr><th>Family</th><th>Variable</th><th>Freq.</th><th>Source</th><th>Transform</th><th>Expected sign</th><th>Rationale</th><th>In demo model</th></tr>'+rows.map(r=>`<tr><td><span class="tag">${CAT_TAG[r[0]]}</span>${r[0]}</td>${r.slice(1).map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}
+
+/* ---------- wiring ---------- */
+function setData(D){S.data=D;S.shocks=null;VAL.px=null;S.res=null;recompute()}
+function recompute(){try{compute();render()}catch(e){console.error(e);$('#hero').textContent='Error: '+e.message}}
+let tmr;const deb=()=>{clearTimeout(tmr);tmr=setTimeout(recompute,60)};
+['pH','pK','pC','pD','pN','pF'].forEach(id=>$('#'+id).addEventListener('change',deb));
+$('#win').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.win=+b.dataset.w;[...$('#win').children].forEach(x=>x.setAttribute('aria-pressed',x===b));render()});
+$('#themeBtn').onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark';render()};
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x===b));document.querySelectorAll('.panel').forEach(p=>p.hidden=p.id!=='p-'+b.dataset.tab);Tip.hide();render()});
+$('#src').addEventListener('change',e=>{const v=e.target.value;$('#urlWrap').style.display=v==='url'?'':'none';if(v==='demo')setData(makeDemo(7,1100));else if(v==='csv')$('#fileIn').click()});
+$('#fileIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{setData(parseCSV(t))}catch(err){alert(err.message);$('#src').value='demo'}})});
+$('#urlIn').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fetch($('#urlIn').value).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()}).then(t=>setData(parseCSV(t))).catch(err=>alert('Could not load: '+err.message+'\n(Browsers block cross-origin file/URL reads — serve the CSV from localhost or upload it.)'))}});
+function download(name,txt){const a=h('a',{href:URL.createObjectURL(new Blob([txt],{type:'text/csv'})),download:name});document.body.append(a);a.click();a.remove()}
+$('#tplBtn').onclick=()=>{const D=makeDemo(7,1100),i0=D.dates.length-6;let t='Date,Close,Volume,SET,USDTHB,AAPL,TH10Y,FFLOW,SENT\n';for(let i=i0;i<D.dates.length;i++)t+=[D.dates[i],D.close[i],D.volume[i],D.ex.SET[i].toFixed(2),D.ex.USDTHB[i].toFixed(3),D.ex.AAPL[i].toFixed(2),D.ex.TH10Y[i].toFixed(3),D.ex.FFLOW[i].toFixed(2),D.ex.SENT[i].toFixed(3)].join(',')+'\n';
+ download('com7_template.csv',t+'# Replace with ≥450 daily rows of real, adjusted data. Required: Date (YYYY-MM-DD), Close. Optional: Volume and any numeric driver columns (SET, USDTHB, AAPL, TH10Y, FFLOW, SENT recognised by name; others auto-featurised). Delete this comment line.\n')};
+$('#expBtn').onclick=()=>{const R=S.res,D=S.data;let t='Date,Close,P_Bear,Regime\n';D.dates.forEach((d,i)=>{t+=`${d},${D.close[i]},${isFinite(R.WF.P[i])?R.WF.P[i].toFixed(4):''},${isFinite(R.state[i])?(R.state[i]?'Bear':'Bull'):''}\n`});download('com7_signals'+(D.synthetic?'_SYNTHETIC':'')+'.csv',t)};
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>S.res&&render(),150)});
+renderDrivers();setData(makeDemo(7,1100));
+</script>
+</body>
+</html>
